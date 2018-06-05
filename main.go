@@ -16,22 +16,11 @@ func checkAndMakingLogDirectory() {
 }
 
 func checkAndMakingTwitterLogFile(twitterFilePath string) *os.File {
-	_, err := os.Stat(twitterFilePath)
-	if err != nil && os.IsNotExist(err) {
-		twFile, createErr := os.Create(twitterFilePath)
-		if createErr != nil {
-			log.Fatal("Failed to create log file")
-		}
-
-		return twFile
-	} else {
-		twFile, err := os.Open(twitterFilePath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return twFile
+	twFile, err := os.OpenFile(twitterFilePath, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		log.Fatal(err)
 	}
-
+	return twFile
 }
 
 func main() {
