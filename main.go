@@ -6,6 +6,8 @@ import (
 	"log"
 	"path/filepath"
 	"encoding/json"
+	"strconv"
+	"scinapse-watch/slack"
 )
 
 func checkAndMakingLogDirectory() {
@@ -48,6 +50,10 @@ func main() {
 	}
 
 	if len(oldTwitts) != len(newTwitts) {
+		if len(oldTwitts) > 0 {
+			sendNewComingTwitts(oldTwitts, newTwitts)
+		}
+
 		enc := json.NewEncoder(twFile)
 		err := enc.Encode(newTwitts)
 
@@ -56,5 +62,33 @@ func main() {
 		}
 
 		oldTwitts = newTwitts
+	}
+}
+
+func sendNewComingTwitts(oldTwitts []*twitter.TwitItem, newTwitts []*twitter.TwitItem) {
+	var newcomerTwitts []*twitter.TwitItem
+	var oldTimeStamp int64
+
+	i, err := strconv.ParseInt(oldTwitts[0].Timestamp[6:], 10, 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	oldTimeStamp = i
+	for _, twit := range newTwitts {
+		timestamp, err := strconv.ParseInt(twit.Timestamp[6:], 10, 64)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if oldTimeStamp < timestamp {
+			newcomerTwitts = append(newcomerTwitts, twit)
+		}
+	}
+
+	if len(newcomerTwitts) > 0 {
+		for _, twit := range newcomerTwitts {
+			slack.SendTwitterInformation(twit)
+		}
 	}
 }

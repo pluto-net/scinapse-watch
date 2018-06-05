@@ -14,10 +14,17 @@ import (
 )
 
 type TwitItem struct {
-	Content  string `json:"content"`
-	FullName string `json:"full_name"`
-	Username string `json:"username"`
-	Link     string `json:"link"`
+	Content   string   `json:"content"`
+	FullName  string   `json:"full_name"`
+	Username  string   `json:"username"`
+	Link      string   `json:"link"`
+	Timestamp string   `json:timestamp`
+	DesLinks  []string `json:destination_link`
+}
+
+func NewTwitItem() TwitItem {
+	var slice = make([]string, 0)
+	return TwitItem{DesLinks: slice}
 }
 
 func renderNode(n *html.Node) string {
@@ -46,11 +53,25 @@ func getTwitItem(node *html.Node, twitItem *TwitItem) {
 
 			}
 
+			if attr.Key == "data-url" && node.Data == "a" {
+				if len(attr.Val) > 0 && !strings.Contains(attr.Val, "twitter.com") { // To avoid twitter image links
+					twitItem.DesLinks = append(twitItem.DesLinks, attr.Val)
+				}
+			}
+
 			if attr.Key == "class" && attr.Val == "tweet-text" {
 				text := renderNode(node)
 
 				if len(text) != 0 {
 					twitItem.Content = text
+				}
+			}
+
+			if attr.Key == "class" && attr.Val == "timestamp" {
+				timeStamp := node.FirstChild.NextSibling.Attr[0].Val
+
+				if len(timeStamp) != 0 {
+					twitItem.Timestamp = timeStamp
 				}
 			}
 
@@ -100,7 +121,7 @@ func (t TwitItem) validateTwitItem() bool {
 
 func parseTwitTable(node *html.Node, twitItems *[]*TwitItem) {
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		var twitItem TwitItem
+		twitItem := NewTwitItem()
 		getTwitItem(child, &twitItem)
 
 		if twitItem.validateTwitItem() {

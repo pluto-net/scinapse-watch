@@ -15,3 +15,6 @@
 .idea
 logs
 .vscode
+
+# OS
+.DS_Store
