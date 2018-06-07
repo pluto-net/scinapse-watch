@@ -17,7 +17,7 @@ func checkAndMakingLogDirectory() {
 	}
 }
 
-func checkAndMakingTwitterLogFile(twitterFilePath string) *os.File {
+func openOrCreateLogFile(twitterFilePath string) *os.File {
 	twFile, err := os.OpenFile(twitterFilePath, os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		log.Fatal(err)
@@ -27,42 +27,51 @@ func checkAndMakingTwitterLogFile(twitterFilePath string) *os.File {
 
 func main() {
 	checkAndMakingLogDirectory()
+	logFilePath, err := filepath.Abs("./logs/twitter.json")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	newTwitts := twitter.Crawl()
+	oldTwitts := getOldTwitts(logFilePath)
 
-	twitterFilePath, fileError := filepath.Abs("./logs/twitter.json")
-	if fileError != nil {
-		log.Fatal("can not assign file path")
-	}
-
-	twFile := checkAndMakingTwitterLogFile(twitterFilePath)
-	defer twFile.Close()
-
-	var oldTwitts = make([]*twitter.TwitItem, 0)
-
-	dec := json.NewDecoder(twFile)
-	decodeError := dec.Decode(&oldTwitts)
-
-	if decodeError != nil {
-		if decodeError.Error() != "EOF" {
-			log.Fatal(decodeError)
-		}
-	}
+	os.Remove(logFilePath)
 
 	if len(oldTwitts) != len(newTwitts) {
 		if len(oldTwitts) > 0 {
 			sendNewComingTwitts(oldTwitts, newTwitts)
 		}
 
-		enc := json.NewEncoder(twFile)
-		err := enc.Encode(newTwitts)
+		f := openOrCreateLogFile(logFilePath)
 
+
+		enc := json.NewEncoder(f)
+		err = enc.Encode(newTwitts)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		oldTwitts = newTwitts
 	}
+}
+
+func getOldTwitts(path string) []*twitter.TwitItem {
+	twFile := openOrCreateLogFile(path)
+	defer twFile.Close()
+
+	var oldTwitts = make([]*twitter.TwitItem, 0)
+	info, err := twFile.Stat()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if info.Size() > 0 {
+		dec := json.NewDecoder(twFile)
+		err = dec.Decode(&oldTwitts)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return oldTwitts
 }
 
 func sendNewComingTwitts(oldTwitts []*twitter.TwitItem, newTwitts []*twitter.TwitItem) {
