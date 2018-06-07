@@ -24,8 +24,7 @@ type TwitItem struct {
 }
 
 func NewTwitItem() TwitItem {
-	var slice = make([]string, 0)
-	return TwitItem{DesLinks: slice}
+	return TwitItem{DesLinks: make([]string, 0)}
 }
 
 func renderNode(n *html.Node) string {
@@ -40,7 +39,7 @@ func getTwitItem(node *html.Node, twitItem *TwitItem) {
 		for _, attr := range node.Attr {
 			if attr.Key == "class" && attr.Val == "fullname" {
 				fullName := node.FirstChild.Data
-				if len(fullName) != 0 {
+				if len(fullName) > 0 {
 					twitItem.FullName = fullName
 				}
 
@@ -48,7 +47,7 @@ func getTwitItem(node *html.Node, twitItem *TwitItem) {
 
 			if attr.Key == "class" && attr.Val == "username" {
 				userName := strings.TrimSpace(node.LastChild.Data)
-				if len(userName) != 0 {
+				if len(userName) > 0 {
 					twitItem.Username = userName
 				}
 
@@ -63,7 +62,7 @@ func getTwitItem(node *html.Node, twitItem *TwitItem) {
 			if attr.Key == "class" && attr.Val == "tweet-text" {
 				text := renderNode(node)
 
-				if len(text) != 0 {
+				if len(text) > 0 {
 					twitItem.Content = text
 				}
 			}
@@ -71,7 +70,7 @@ func getTwitItem(node *html.Node, twitItem *TwitItem) {
 			if attr.Key == "class" && attr.Val == "timestamp" {
 				timeStamp := node.FirstChild.NextSibling.Attr[0].Val
 
-				if len(timeStamp) != 0 {
+				if len(timeStamp) > 0 {
 					twitItem.Timestamp = timeStamp
 				}
 			}
@@ -79,7 +78,7 @@ func getTwitItem(node *html.Node, twitItem *TwitItem) {
 			if attr.Key == "href" && node.Data == "table" {
 				link := attr.Val
 
-				if len(link) != 0 {
+				if len(link) > 0 {
 					twitItem.Link = link
 				}
 			}
@@ -103,7 +102,6 @@ func findTwitTableNode(node *html.Node) (*html.Node, error) {
 
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
 		nextNode, err := findTwitTableNode(child)
-
 		if err == nil {
 			return nextNode, err
 		}
@@ -112,37 +110,34 @@ func findTwitTableNode(node *html.Node) (*html.Node, error) {
 	return nil, errors.New("No table to crawl")
 }
 
-func (t TwitItem) validateTwitItem() bool {
-	if len(t.Content) == 0 || len(t.Username) == 0 || len(t.FullName) == 0 || len(t.Link) == 0 {
-		return false
-	} else {
-		return true
-	}
+func (t TwitItem) isValid() bool {
+	return len(t.Content) > 0 && len(t.Username) > 0 && len(t.FullName) > 0 && len(t.Link) > 0
 }
 
-func parseTwitTable(node *html.Node, twitItems *[]*TwitItem) {
+func parseTwitTable(node *html.Node) []*TwitItem {
+	result := make([]*TwitItem, 0)
+
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
 		twitItem := NewTwitItem()
 		getTwitItem(child, &twitItem)
 
-		if twitItem.validateTwitItem() {
-			*twitItems = append(*twitItems, &twitItem)
+		if twitItem.isValid() {
+			result = append(result, &twitItem)
 		}
 	}
+
+	return result
 }
 
 func Crawl() []*TwitItem {
-	time := string(time.Now().Unix())
-	resp, err := http.Get(fmt.Sprintf("https://mobile.twitter.com/search?q=scinapse.io&s=typd&x=0&y=0&t=%s", time))
-
+	t := string(time.Now().Unix())
+	resp, err := http.Get(fmt.Sprintf("https://mobile.twitter.com/search?q=scinapse.io&s=typd&x=0&y=0&t=%s", t))
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	defer resp.Body.Close()
 
 	htmlResponse, err := ioutil.ReadAll(resp.Body)
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -150,18 +145,14 @@ func Crawl() []*TwitItem {
 	htmlString := string(htmlResponse)
 
 	parsedHTML, err := html.Parse(strings.NewReader(htmlString))
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	node, err := findTwitTableNode(parsedHTML)
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var twits = make([]*TwitItem, 0)
-	parseTwitTable(node, &twits)
-	return twits
+	return parseTwitTable(node)
 }
