@@ -1,16 +1,17 @@
 package twitter
 
 import (
-	"net/http"
-	"time"
-	"fmt"
-	"io/ioutil"
-	"golang.org/x/net/html"
-	"strings"
-	"log"
-	"errors"
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"strings"
+	"time"
+
+	"golang.org/x/net/html"
 )
 
 type TwitItem struct {
@@ -18,8 +19,8 @@ type TwitItem struct {
 	FullName  string   `json:"full_name"`
 	Username  string   `json:"username"`
 	Link      string   `json:"link"`
-	Timestamp string   `json:timestamp`
-	DesLinks  []string `json:destination_link`
+	Timestamp string   `json:"timestamp"`
+	DesLinks  []string `json:"destination_link"`
 }
 
 func NewTwitItem() TwitItem {

@@ -2,19 +2,19 @@ package slack
 
 import (
 	"bytes"
-	"net/http"
-	"io/ioutil"
-	"scinapse-watch/twitter"
 	"encoding/json"
-	"log"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
+
+	"github.com/pluto-net/scinapse-watch/twitter"
 )
 
 type TwitPayload struct {
 	Text string `json:"text"`
 }
-
 
 func SendTwitterInformation(newTwitt *twitter.TwitItem) {
 	twitSlackUrl := os.Getenv("TWIT_SLACK_URL")
@@ -34,9 +34,9 @@ func SendTwitterInformation(newTwitt *twitter.TwitItem) {
 
 	}
 
-	textContent := fmt.Sprintf("`user`%s `link`(%s): `Referenced` %s", newTwitt.Username, link, referUrls )
+	textContent := fmt.Sprintf("`user`%s `link`(%s): `Referenced` %s", newTwitt.Username, link, referUrls)
 
-	payload := TwitPayload{ Text: textContent}
+	payload := TwitPayload{Text: textContent}
 
 	jsonStr, err := json.Marshal(payload)
 	if err != nil {
