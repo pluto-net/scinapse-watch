@@ -1,13 +1,14 @@
 package main
 
 import (
-	"scinapse-watch/twitter"
-	"os"
-	"log"
-	"path/filepath"
 	"encoding/json"
+	"log"
+	"os"
+	"path/filepath"
 	"strconv"
-	"scinapse-watch/slack"
+
+	"github.com/pluto-net/scinapse-watch/slack"
+	"github.com/pluto-net/scinapse-watch/twitter"
 )
 
 func checkAndMakingLogDirectory() {
@@ -32,32 +33,31 @@ func main() {
 		log.Fatal(err)
 	}
 
-	newTwitts := twitter.Crawl()
-	oldTwitts := getOldTwitts(logFilePath)
+	newTwits := twitter.Crawl()
+	oldTwits := getOldTwits(logFilePath)
 
 	os.Remove(logFilePath)
 
-	if len(oldTwitts) != len(newTwitts) {
-		if len(oldTwitts) > 0 {
-			sendNewComingTwitts(oldTwitts, newTwitts)
+	if len(oldTwits) != len(newTwits) {
+		if len(oldTwits) > 0 {
+			sendNewComingTwits(oldTwits, newTwits)
 		}
 
 		f := openOrCreateLogFile(logFilePath)
 
-
 		enc := json.NewEncoder(f)
-		err = enc.Encode(newTwitts)
+		err = enc.Encode(newTwits)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 }
 
-func getOldTwitts(path string) []*twitter.TwitItem {
+func getOldTwits(path string) []*twitter.TwitItem {
 	twFile := openOrCreateLogFile(path)
 	defer twFile.Close()
 
-	var oldTwitts = make([]*twitter.TwitItem, 0)
+	var oldTwits = make([]*twitter.TwitItem, 0)
 	info, err := twFile.Stat()
 	if err != nil {
 		log.Fatal(err)
@@ -65,20 +65,20 @@ func getOldTwitts(path string) []*twitter.TwitItem {
 
 	if info.Size() > 0 {
 		dec := json.NewDecoder(twFile)
-		err = dec.Decode(&oldTwitts)
+		err = dec.Decode(&oldTwits)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	return oldTwitts
+	return oldTwits
 }
 
-func sendNewComingTwitts(oldTwitts []*twitter.TwitItem, newTwitts []*twitter.TwitItem) {
-	var newcomerTwitts []*twitter.TwitItem
+func sendNewComingTwits(oldTwits []*twitter.TwitItem, newTwitts []*twitter.TwitItem) {
+	var newcomerTwits []*twitter.TwitItem
 	var oldTimeStamp int64
 
-	i, err := strconv.ParseInt(oldTwitts[0].Timestamp[6:], 10, 64)
+	i, err := strconv.ParseInt(oldTwits[0].Timestamp[6:], 10, 64)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,12 +91,12 @@ func sendNewComingTwitts(oldTwitts []*twitter.TwitItem, newTwitts []*twitter.Twi
 		}
 
 		if oldTimeStamp < timestamp {
-			newcomerTwitts = append(newcomerTwitts, twit)
+			newcomerTwits = append(newcomerTwits, twit)
 		}
 	}
 
-	if len(newcomerTwitts) > 0 {
-		for _, twit := range newcomerTwitts {
+	if len(newcomerTwits) > 0 {
+		for _, twit := range newcomerTwits {
 			slack.SendTwitterInformation(twit)
 		}
 	}
